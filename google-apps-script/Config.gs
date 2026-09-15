@@ -43,3 +43,18 @@ function getSheet(sheetName) {
   }
   return sheet;
 }
+
+/**
+ * Lee la hoja CONFIGURACION (columnas CLAVE / VALOR) y la devuelve como
+ * un objeto { CLAVE: VALOR }, para leer parametros globales como
+ * ADMIN_PASSWORD sin tener codigo sensible escrito en el script.
+ */
+function obtenerConfiguracion() {
+  const sheet = getSheet(SHEET_NAMES.CONFIGURACION);
+  const registros = sheetToObjects(sheet);
+  const config = {};
+  registros.forEach(function (r) {
+    config[r.CLAVE] = r.VALOR;
+  });
+  return config;
+}

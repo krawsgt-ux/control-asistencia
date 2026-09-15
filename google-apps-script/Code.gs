@@ -50,6 +50,30 @@ function doPost(e) {
       return jsonOutput(resultado);
     }
 
+    if (action === 'adminLogin') {
+      return jsonOutput(adminLogin(payload.password));
+    }
+
+    if (action === 'adminGetPersonal') {
+      return jsonOutput(adminObtenerPersonal(payload.password));
+    }
+
+    if (action === 'adminAddPersonal') {
+      return jsonOutput(adminAgregarPersonal(payload.password, payload.datos));
+    }
+
+    if (action === 'adminUpdatePersonal') {
+      return jsonOutput(adminActualizarPersonal(payload.password, payload.idTrabajador, payload.datos));
+    }
+
+    if (action === 'adminSetEstadoPersonal') {
+      return jsonOutput(adminCambiarEstadoPersonal(payload.password, payload.idTrabajador, payload.estado));
+    }
+
+    if (action === 'adminReporteAsistenciaDia') {
+      return jsonOutput(adminReporteAsistenciaDia(payload.password, payload.fecha));
+    }
+
     return jsonOutput(buildError('ACCION_INVALIDA', 'Accion no reconocida.'));
   } catch (err) {
     console.error(err);
