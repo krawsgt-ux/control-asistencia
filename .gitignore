@@ -2,8 +2,5 @@
 Thumbs.db
 *.log
 .vscode/
-
-# App Android del jefe: se queda solo local, no se publica en el repo
-# publico de GitHub, para no exponer mas detalle de los endpoints
-# administrativos de lo que ya esta en google-apps-script/.
-/android/
+.idea/
+*.iml
