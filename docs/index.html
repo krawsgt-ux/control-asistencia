@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Control de Asistencia</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="contenedor">
+
+  <div class="tarjeta" id="tarjetaFormulario">
+    <div class="logo">🕒</div>
+    <h1>Control de Asistencia</h1>
+    <p class="subtitulo">Selecciona tu nombre e ingresa tu PIN</p>
+
+    <div class="campo">
+      <label for="selectTrabajador">Trabajador</label>
+      <select id="selectTrabajador" disabled>
+        <option value="">Cargando trabajadores...</option>
+      </select>
+    </div>
+
+    <div class="campo">
+      <label for="inputPin">PIN</label>
+      <input
+        type="password"
+        id="inputPin"
+        inputmode="numeric"
+        pattern="[0-9]*"
+        maxlength="4"
+        placeholder="• • • •"
+        autocomplete="off">
+    </div>
+
+    <button id="btnRegistrar" disabled>REGISTRAR ASISTENCIA</button>
+
+    <p class="mensaje-error" id="mensajeError" hidden></p>
+  </div>
+
+  <div class="tarjeta tarjeta-resultado" id="tarjetaResultado" hidden>
+    <div class="icono-resultado" id="iconoResultado"></div>
+    <h2 id="tituloResultado"></h2>
+
+    <div class="detalle-resultado">
+      <div class="fila-detalle"><span>Nombre</span><strong id="resNombre"></strong></div>
+      <div class="fila-detalle"><span>Fecha</span><strong id="resFecha"></strong></div>
+      <div class="fila-detalle"><span>Hora</span><strong id="resHora"></strong></div>
+      <div class="fila-detalle"><span>Turno</span><strong id="resTurno"></strong></div>
+      <div class="fila-detalle"><span>Tipo de registro</span><strong id="resTipo"></strong></div>
+    </div>
+
+    <button id="btnNuevoRegistro">REGISTRAR OTRO</button>
+  </div>
+
+  <p class="pie">Control de Asistencia · America/Guatemala</p>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
