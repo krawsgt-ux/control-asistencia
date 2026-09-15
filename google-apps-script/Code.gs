@@ -74,6 +74,10 @@ function doPost(e) {
       return jsonOutput(adminReporteAsistenciaDia(payload.password, payload.fecha));
     }
 
+    if (action === 'adminReporteTrabajadorRango') {
+      return jsonOutput(adminReporteTrabajadorRango(payload.password, payload.idTrabajador, payload.fechaInicio, payload.fechaFin));
+    }
+
     return jsonOutput(buildError('ACCION_INVALIDA', 'Accion no reconocida.'));
   } catch (err) {
     console.error(err);

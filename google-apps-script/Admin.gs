@@ -242,3 +242,77 @@ function adminReporteAsistenciaDia(password, fecha) {
 
   return buildSuccess({ fecha: fecha, trabajadores: reporte });
 }
+
+/**
+ * Detalle de turnos de UN trabajador dentro de un rango de fechas
+ * (pensado para la quincena: 01-15 o 16-fin de mes, pero el rango lo
+ * decide quien llama, no esta fijo aqui). Devuelve los dias con registros,
+ * mas totales de dias trabajados, horas y tardanzas, para ver de un
+ * vistazo si el trabajador cumplio antes de calcular su pago.
+ */
+function adminReporteTrabajadorRango(password, idTrabajador, fechaInicio, fechaFin) {
+  if (!validarAdminPassword(password)) {
+    return buildError('NO_AUTORIZADO', 'Contrasena de administrador incorrecta.');
+  }
+  if (!idTrabajador || !fechaInicio || !fechaFin) {
+    return buildError('DATOS_INCOMPLETOS', 'Debe indicar trabajador, fecha de inicio y fecha de fin.');
+  }
+
+  const trabajador = buscarTrabajadorPorId(idTrabajador);
+  if (!trabajador) {
+    return buildError('TRABAJADOR_NO_EXISTE', 'El trabajador no existe.');
+  }
+
+  const inicioComparable = fechaAComparable(fechaInicio);
+  const finComparable = fechaAComparable(fechaFin);
+  const idBuscado = String(idTrabajador).trim();
+
+  const registros = sheetToObjects(getSheet(SHEET_NAMES.ASISTENCIAS)).filter(function (r) {
+    if (String(r.ID_TRABAJADOR).trim() !== idBuscado) return false;
+    const fechaComparable = fechaAComparable(normalizarFecha(r.FECHA));
+    return fechaComparable >= inicioComparable && fechaComparable <= finComparable;
+  });
+
+  const porFecha = {};
+  let totalHoras = 0;
+  let totalTardanzas = 0;
+
+  registros.forEach(function (r) {
+    const fecha = normalizarFecha(r.FECHA);
+    if (!porFecha[fecha]) porFecha[fecha] = [];
+    porFecha[fecha].push({
+      turno: r.ID_TURNO,
+      horaEntrada: normalizarHora(r.HORA_ENTRADA),
+      horaSalida: r.HORA_SALIDA ? normalizarHora(r.HORA_SALIDA) : null,
+      horasTrabajadas: r.HORAS_TRABAJADAS || 0,
+      estadoRegistro: r.ESTADO_REGISTRO,
+      observaciones: r.OBSERVACIONES || ''
+    });
+
+    totalHoras += Number(r.HORAS_TRABAJADAS) || 0;
+    if (r.OBSERVACIONES && String(r.OBSERVACIONES).indexOf('TARDANZA') !== -1) {
+      totalTardanzas++;
+    }
+  });
+
+  const dias = Object.keys(porFecha)
+    .sort(function (a, b) {
+      const compA = fechaAComparable(a);
+      const compB = fechaAComparable(b);
+      return compA < compB ? -1 : (compA > compB ? 1 : 0);
+    })
+    .map(function (fecha) {
+      return { fecha: fecha, turnos: porFecha[fecha] };
+    });
+
+  return buildSuccess({
+    id: String(trabajador.ID_TRABAJADOR),
+    nombre: trabajador.NOMBRE_COMPLETO,
+    fechaInicio: fechaInicio,
+    fechaFin: fechaFin,
+    diasTrabajados: dias.length,
+    totalHoras: Math.round(totalHoras * 100) / 100,
+    totalTardanzas: totalTardanzas,
+    dias: dias
+  });
+}

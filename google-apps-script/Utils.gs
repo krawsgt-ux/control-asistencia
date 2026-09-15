@@ -36,6 +36,16 @@ function normalizarHora(valor) {
   return String(valor).trim();
 }
 
+/**
+ * Convierte una fecha "dd/MM/yyyy" a "yyyy-MM-dd" para poder comparar
+ * dos fechas con simples operadores >= / <= (comparacion de texto).
+ */
+function fechaAComparable(fechaTexto) {
+  const partes = String(fechaTexto).trim().split('/');
+  if (partes.length !== 3) return String(fechaTexto).trim();
+  return partes[2] + '-' + partes[1] + '-' + partes[0];
+}
+
 function generarIdRegistro(prefijo) {
   const timestamp = new Date().getTime();
   const random = Math.floor(Math.random() * 1000);
