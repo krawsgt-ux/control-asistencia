@@ -30,6 +30,16 @@ control-asistencia/
 └── README.md
 ```
 
+## Cómo funciona el doble turno
+
+Cualquier trabajador activo puede completar hasta **dos** ciclos de
+entrada/salida el mismo día (uno por cada turno activo en la hoja `TURNOS`).
+El sistema no le pregunta cuál turno es: al registrar una entrada, elige
+automáticamente el turno activo que aún no haya completado hoy y cuya
+`HORA_INICIO` esté más cerca de la hora actual. Solo cuando ya completó
+**todos** los turnos activos del día, un escaneo adicional muestra "Ya
+completaste todos tus turnos de hoy".
+
 ## Estado actual
 
 - [x] Fase 1 — Diseño de Google Sheets
@@ -37,7 +47,7 @@ control-asistencia/
 - [x] Fase 3 — Página web
 - [x] Fase 4 — Conexión web ↔ Apps Script
 - [x] Fase 5 — Pruebas de entrada y salida (verificado end-to-end, incluye doble turno por día)
-- [ ] Fase 6 — Publicar en GitHub Pages
+- [x] Fase 6 — Publicado en GitHub Pages
 - [ ] Fase 7 — Pruebas completas
 - [ ] Fase 8 — API lista para app Android (ya preparada por diseño: respuestas JSON,
       sin dependencia de sesión de navegador, acciones desacopladas en `doGet`/`doPost`)
