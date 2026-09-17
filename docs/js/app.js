@@ -2,6 +2,9 @@ const state = {
   trabajadores: []
 };
 
+const CLAVE_ULTIMO_TRABAJADOR = 'controlAsistencia_ultimoTrabajadorId';
+const TEXTO_BOTON_DEFECTO = 'REGISTRAR ASISTENCIA';
+
 let elementos = {};
 
 document.addEventListener('DOMContentLoaded', init);
@@ -34,7 +37,10 @@ function configurarEventos() {
     elementos.inputPin.value = elementos.inputPin.value.replace(/[^0-9]/g, '').slice(0, 4);
     validarFormulario();
   });
-  elementos.selectTrabajador.addEventListener('change', validarFormulario);
+  elementos.selectTrabajador.addEventListener('change', function () {
+    validarFormulario();
+    actualizarBotonSegunTrabajador(elementos.selectTrabajador.value);
+  });
   elementos.btnRegistrar.addEventListener('click', registrarAsistencia);
   elementos.btnNuevoRegistro.addEventListener('click', mostrarFormulario);
 }
@@ -85,6 +91,42 @@ function llenarSelect(trabajadores) {
   });
 
   elementos.selectTrabajador.disabled = false;
+
+  // Si este telefono ya se uso antes para registrar a alguien, se deja su
+  // nombre preseleccionado (nunca el PIN, eso no se guarda) para que no
+  // tenga que buscarse en la lista cada vez que escanea el QR.
+  const idRecordado = leerUltimoTrabajador();
+  if (idRecordado && trabajadores.some(function (t) { return t.id === idRecordado; })) {
+    elementos.selectTrabajador.value = idRecordado;
+  }
+
+  validarFormulario();
+  actualizarBotonSegunTrabajador(elementos.selectTrabajador.value);
+}
+
+/**
+ * Consulta (sin PIN) si el siguiente registro de este trabajador seria
+ * una entrada o una salida, y actualiza el texto del boton para que el
+ * trabajador sepa que va a pasar antes de confirmar.
+ */
+async function actualizarBotonSegunTrabajador(idTrabajador) {
+  if (!idTrabajador) {
+    elementos.btnRegistrar.textContent = TEXTO_BOTON_DEFECTO;
+    return;
+  }
+
+  try {
+    const respuesta = await fetch(API_URL + '?action=siguienteAccion&idTrabajador=' + encodeURIComponent(idTrabajador));
+    const json = await respuesta.json();
+
+    if (json.success && json.data && json.data.tipoSiguiente === 'SALIDA') {
+      elementos.btnRegistrar.textContent = 'REGISTRAR SALIDA';
+    } else {
+      elementos.btnRegistrar.textContent = 'REGISTRAR ENTRADA';
+    }
+  } catch (err) {
+    elementos.btnRegistrar.textContent = TEXTO_BOTON_DEFECTO;
+  }
 }
 
 async function registrarAsistencia() {
@@ -123,12 +165,13 @@ async function registrarAsistencia() {
       return;
     }
 
+    guardarUltimoTrabajador(idTrabajador);
     mostrarResultado(json.data);
     elementos.inputPin.value = '';
   } catch (err) {
     mostrarError('No se pudo conectar con el servidor. Intenta de nuevo.');
   } finally {
-    elementos.btnRegistrar.textContent = 'REGISTRAR ASISTENCIA';
+    actualizarBotonSegunTrabajador(elementos.selectTrabajador.value);
     validarFormulario();
   }
 }
@@ -151,6 +194,10 @@ function mostrarResultado(data) {
   elementos.resTurno.textContent = data.turno;
   elementos.resTipo.textContent = esEntrada ? 'Entrada' : 'Salida';
 
+  // El siguiente paso logico para esta misma persona es lo contrario de
+  // lo que acaba de registrar.
+  elementos.btnNuevoRegistro.textContent = esEntrada ? 'REGISTRAR SALIDA' : 'REGISTRAR ENTRADA';
+
   elementos.tarjetaFormulario.hidden = true;
   elementos.tarjetaResultado.hidden = false;
 }
@@ -158,10 +205,27 @@ function mostrarResultado(data) {
 function mostrarFormulario() {
   elementos.tarjetaResultado.hidden = true;
   elementos.tarjetaFormulario.hidden = false;
-  elementos.selectTrabajador.value = '';
   elementos.inputPin.value = '';
   ocultarError();
   validarFormulario();
+  actualizarBotonSegunTrabajador(elementos.selectTrabajador.value);
+}
+
+function guardarUltimoTrabajador(idTrabajador) {
+  try {
+    localStorage.setItem(CLAVE_ULTIMO_TRABAJADOR, idTrabajador);
+  } catch (err) {
+    // Si el navegador bloquea localStorage (modo privado, etc.) no pasa
+    // nada grave: simplemente no se recordara el nombre la proxima vez.
+  }
+}
+
+function leerUltimoTrabajador() {
+  try {
+    return localStorage.getItem(CLAVE_ULTIMO_TRABAJADOR);
+  } catch (err) {
+    return null;
+  }
 }
 
 function mostrarError(mensaje) {

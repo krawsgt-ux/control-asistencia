@@ -65,6 +65,30 @@ function elegirTurnoParaEntrada(turnosActivos, turnosCompletadosHoy, horaActual)
 }
 
 /**
+ * Indica si el proximo registro de este trabajador seria una ENTRADA o
+ * una SALIDA, SIN pedir PIN. Es para que el boton de la pagina publica
+ * pueda mostrar el texto correcto (Registrar entrada / Registrar salida)
+ * apenas el trabajador selecciona su nombre, antes de escribir el PIN.
+ * No expone PIN, tarifa ni ningun otro dato del trabajador.
+ */
+function obtenerSiguienteAccion(idTrabajador) {
+  if (!idTrabajador) {
+    return buildError('DATOS_INCOMPLETOS', 'Debe indicar el trabajador.');
+  }
+
+  const trabajador = buscarTrabajadorPorId(idTrabajador);
+  if (!trabajador || trabajador.ESTADO !== ESTADOS.ACTIVO) {
+    return buildSuccess({ tipoSiguiente: 'ENTRADA' });
+  }
+
+  const sheet = getSheet(SHEET_NAMES.ASISTENCIAS);
+  const fechaHoy = getFechaHoyGT();
+  const registroAbierto = buscarRegistroAbiertoHoy(sheet, idTrabajador, fechaHoy);
+
+  return buildSuccess({ tipoSiguiente: registroAbierto ? 'SALIDA' : 'ENTRADA' });
+}
+
+/**
  * Punto de entrada principal. Valida trabajador + PIN, determina si
  * corresponde ENTRADA o SALIDA, y escribe/actualiza la fila correspondiente
  * en ASISTENCIAS. Protegido con LockService para evitar registros duplicados

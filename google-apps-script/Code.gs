@@ -23,6 +23,10 @@ function doGet(e) {
       return jsonOutput(buildSuccess({ status: 'ok', servidor: getFechaHoyGT() + ' ' + getHoraActualGT() }));
     }
 
+    if (action === 'siguienteAccion') {
+      return jsonOutput(obtenerSiguienteAccion(e.parameter.idTrabajador));
+    }
+
     return jsonOutput(buildError('ACCION_INVALIDA', 'Accion no reconocida.'));
   } catch (err) {
     console.error(err);
