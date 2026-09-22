@@ -28,9 +28,15 @@ function buscarTrabajadorPorId(idTrabajador) {
   return null;
 }
 
-function validarTrabajadorYPin(idTrabajador, pin) {
-  if (!idTrabajador || !pin) {
-    return { valido: false, error: buildError('DATOS_INCOMPLETOS', 'Debe seleccionar un trabajador e ingresar el PIN.') };
+/**
+ * Valida que el trabajador exista y este ACTIVO. Ya no se pide PIN: la
+ * identidad se confirma con la foto que se toma al momento de registrar
+ * (queda guardada junto al registro en ASISTENCIAS para poder revisarla
+ * despues si hay alguna duda).
+ */
+function validarTrabajador(idTrabajador) {
+  if (!idTrabajador) {
+    return { valido: false, error: buildError('DATOS_INCOMPLETOS', 'Debe seleccionar un trabajador.') };
   }
 
   const trabajador = buscarTrabajadorPorId(idTrabajador);
@@ -40,12 +46,6 @@ function validarTrabajadorYPin(idTrabajador, pin) {
 
   if (trabajador.ESTADO !== ESTADOS.ACTIVO) {
     return { valido: false, error: buildError('TRABAJADOR_INACTIVO', 'Este trabajador no esta activo. Contacte al administrador.') };
-  }
-
-  const pinRegistrado = String(trabajador.PIN).trim();
-  const pinIngresado = String(pin).trim();
-  if (pinRegistrado !== pinIngresado) {
-    return { valido: false, error: buildError('PIN_INCORRECTO', 'El PIN ingresado es incorrecto.') };
   }
 
   return { valido: true, trabajador: trabajador };

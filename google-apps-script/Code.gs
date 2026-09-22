@@ -50,7 +50,7 @@ function doPost(e) {
     const action = payload.action;
 
     if (action === 'registrarAsistencia') {
-      const resultado = registrarAsistencia(payload.idTrabajador, payload.pin);
+      const resultado = registrarAsistencia(payload.idTrabajador, payload.foto);
       return jsonOutput(resultado);
     }
 

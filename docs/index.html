@@ -12,7 +12,7 @@
   <div class="tarjeta" id="tarjetaFormulario">
     <div class="logo">🕒</div>
     <h1>Control de Asistencia</h1>
-    <p class="subtitulo">Selecciona tu nombre e ingresa tu PIN</p>
+    <p class="subtitulo">Selecciona tu nombre y tómate una foto</p>
 
     <div class="campo">
       <label for="selectTrabajador">Trabajador</label>
@@ -22,15 +22,13 @@
     </div>
 
     <div class="campo">
-      <label for="inputPin">PIN</label>
-      <input
-        type="password"
-        id="inputPin"
-        inputmode="numeric"
-        pattern="[0-9]*"
-        maxlength="4"
-        placeholder="• • • •"
-        autocomplete="off">
+      <label>Foto</label>
+      <input type="file" id="inputFoto" accept="image/*" capture="user" hidden>
+      <button type="button" class="boton-foto" id="btnTomarFoto">
+        <span id="iconoFoto">📷</span>
+        <span id="textoFoto">Tomar foto</span>
+      </button>
+      <img id="previewFoto" class="preview-foto" hidden alt="Foto tomada">
     </div>
 
     <button id="btnRegistrar" disabled>REGISTRAR ASISTENCIA</button>

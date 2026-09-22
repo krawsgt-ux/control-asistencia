@@ -89,13 +89,14 @@ function obtenerSiguienteAccion(idTrabajador) {
 }
 
 /**
- * Punto de entrada principal. Valida trabajador + PIN, determina si
- * corresponde ENTRADA o SALIDA, y escribe/actualiza la fila correspondiente
- * en ASISTENCIAS. Protegido con LockService para evitar registros duplicados
- * si el trabajador presiona el boton varias veces muy rapido.
+ * Punto de entrada principal. Valida trabajador, determina si corresponde
+ * ENTRADA o SALIDA, guarda la foto tomada en Drive, y escribe/actualiza la
+ * fila correspondiente en ASISTENCIAS. Protegido con LockService para
+ * evitar registros duplicados si el trabajador presiona el boton varias
+ * veces muy rapido.
  */
-function registrarAsistencia(idTrabajador, pin) {
-  const validacion = validarTrabajadorYPin(idTrabajador, pin);
+function registrarAsistencia(idTrabajador, fotoBase64) {
+  const validacion = validarTrabajador(idTrabajador);
   if (!validacion.valido) {
     return validacion.error;
   }
@@ -118,7 +119,8 @@ function registrarAsistencia(idTrabajador, pin) {
       if (!turnoDelRegistro) {
         return buildError('TURNO_INVALIDO', 'No se encontro el turno asociado a tu entrada abierta.');
       }
-      return registrarSalida(sheet, registroAbierto, turnoDelRegistro, horaActual, fechaHoy);
+      const urlFotoSalida = guardarFoto(fotoBase64, trabajador.ID_TRABAJADOR, 'salida');
+      return registrarSalida(sheet, registroAbierto, turnoDelRegistro, horaActual, fechaHoy, urlFotoSalida);
     }
 
     const turnosActivos = obtenerTurnosActivos();
@@ -132,13 +134,14 @@ function registrarAsistencia(idTrabajador, pin) {
       return buildError('ASISTENCIA_COMPLETA', 'Ya completaste todos tus turnos de hoy.');
     }
 
-    return registrarEntrada(sheet, trabajador, turnoElegido, horaActual, fechaHoy);
+    const urlFotoEntrada = guardarFoto(fotoBase64, trabajador.ID_TRABAJADOR, 'entrada');
+    return registrarEntrada(sheet, trabajador, turnoElegido, horaActual, fechaHoy, urlFotoEntrada);
   } finally {
     lock.releaseLock();
   }
 }
 
-function registrarEntrada(sheet, trabajador, turno, horaActual, fechaHoy) {
+function registrarEntrada(sheet, trabajador, turno, horaActual, fechaHoy, urlFotoEntrada) {
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
 
   let observaciones = '';
@@ -160,6 +163,8 @@ function registrarEntrada(sheet, trabajador, turno, horaActual, fechaHoy) {
       case 'HORAS_TRABAJADAS': return '';
       case 'ESTADO_REGISTRO': return ESTADOS.ABIERTO;
       case 'OBSERVACIONES': return observaciones;
+      case 'FOTO_ENTRADA_URL': return urlFotoEntrada || '';
+      case 'FOTO_SALIDA_URL': return '';
       default: return '';
     }
   });
@@ -186,7 +191,7 @@ function registrarEntrada(sheet, trabajador, turno, horaActual, fechaHoy) {
   });
 }
 
-function registrarSalida(sheet, registroAbierto, turno, horaActual, fechaHoy) {
+function registrarSalida(sheet, registroAbierto, turno, horaActual, fechaHoy, urlFotoSalida) {
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const fila = registroAbierto._row;
 
@@ -202,11 +207,13 @@ function registrarSalida(sheet, registroAbierto, turno, horaActual, fechaHoy) {
   const colHorasTrabajadas = getColumnIndex(headers, 'HORAS_TRABAJADAS') + 1;
   const colEstado = getColumnIndex(headers, 'ESTADO_REGISTRO') + 1;
   const colObservaciones = getColumnIndex(headers, 'OBSERVACIONES') + 1;
+  const colFotoSalida = getColumnIndex(headers, 'FOTO_SALIDA_URL') + 1;
 
   sheet.getRange(fila, colHoraSalida).setNumberFormat('@').setValue(horaActual);
   sheet.getRange(fila, colHorasTrabajadas).setValue(horasTrabajadas);
   sheet.getRange(fila, colEstado).setValue(ESTADOS.CERRADO);
   sheet.getRange(fila, colObservaciones).setValue(observaciones);
+  sheet.getRange(fila, colFotoSalida).setValue(urlFotoSalida || '');
 
   return buildSuccess({
     tipo: 'SALIDA',

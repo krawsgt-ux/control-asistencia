@@ -1,9 +1,12 @@
 const state = {
-  trabajadores: []
+  trabajadores: [],
+  fotoBase64: null
 };
 
 const CLAVE_ULTIMO_TRABAJADOR = 'controlAsistencia_ultimoTrabajadorId';
 const TEXTO_BOTON_DEFECTO = 'REGISTRAR ASISTENCIA';
+const ANCHO_MAXIMO_FOTO = 700;
+const CALIDAD_FOTO = 0.7;
 
 let elementos = {};
 
@@ -17,7 +20,11 @@ function init() {
 
 function cachearElementos() {
   elementos.selectTrabajador = document.getElementById('selectTrabajador');
-  elementos.inputPin = document.getElementById('inputPin');
+  elementos.inputFoto = document.getElementById('inputFoto');
+  elementos.btnTomarFoto = document.getElementById('btnTomarFoto');
+  elementos.iconoFoto = document.getElementById('iconoFoto');
+  elementos.textoFoto = document.getElementById('textoFoto');
+  elementos.previewFoto = document.getElementById('previewFoto');
   elementos.btnRegistrar = document.getElementById('btnRegistrar');
   elementos.mensajeError = document.getElementById('mensajeError');
   elementos.tarjetaFormulario = document.getElementById('tarjetaFormulario');
@@ -33,22 +40,72 @@ function cachearElementos() {
 }
 
 function configurarEventos() {
-  elementos.inputPin.addEventListener('input', function () {
-    elementos.inputPin.value = elementos.inputPin.value.replace(/[^0-9]/g, '').slice(0, 4);
-    validarFormulario();
-  });
   elementos.selectTrabajador.addEventListener('change', function () {
     validarFormulario();
     actualizarBotonSegunTrabajador(elementos.selectTrabajador.value);
   });
+  elementos.btnTomarFoto.addEventListener('click', function () {
+    elementos.inputFoto.click();
+  });
+  elementos.inputFoto.addEventListener('change', manejarFotoSeleccionada);
   elementos.btnRegistrar.addEventListener('click', registrarAsistencia);
   elementos.btnNuevoRegistro.addEventListener('click', mostrarFormulario);
 }
 
 function validarFormulario() {
   const trabajadorSeleccionado = elementos.selectTrabajador.value;
-  const pinValido = elementos.inputPin.value.length === 4;
-  elementos.btnRegistrar.disabled = !(trabajadorSeleccionado && pinValido);
+  elementos.btnRegistrar.disabled = !(trabajadorSeleccionado && state.fotoBase64);
+}
+
+async function manejarFotoSeleccionada() {
+  const archivo = elementos.inputFoto.files && elementos.inputFoto.files[0];
+  if (!archivo) return;
+
+  ocultarError();
+
+  try {
+    state.fotoBase64 = await comprimirFoto(archivo);
+    elementos.previewFoto.src = state.fotoBase64;
+    elementos.previewFoto.hidden = false;
+    elementos.iconoFoto.textContent = '✅';
+    elementos.textoFoto.textContent = 'Foto lista (toca para repetir)';
+    elementos.btnTomarFoto.classList.add('foto-lista');
+  } catch (err) {
+    mostrarError('No se pudo procesar la foto. Intenta de nuevo.');
+    state.fotoBase64 = null;
+  }
+
+  validarFormulario();
+}
+
+/**
+ * Reduce el tamano de la foto (ancho maximo y compresion JPEG) antes de
+ * enviarla, para que no tarde mucho en subir con datos moviles.
+ */
+function comprimirFoto(archivo) {
+  return new Promise(function (resolve, reject) {
+    const lector = new FileReader();
+    lector.onerror = reject;
+    lector.onload = function () {
+      const imagen = new Image();
+      imagen.onerror = reject;
+      imagen.onload = function () {
+        const escala = Math.min(1, ANCHO_MAXIMO_FOTO / imagen.width);
+        const ancho = Math.round(imagen.width * escala);
+        const alto = Math.round(imagen.height * escala);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = ancho;
+        canvas.height = alto;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(imagen, 0, 0, ancho, alto);
+
+        resolve(canvas.toDataURL('image/jpeg', CALIDAD_FOTO));
+      };
+      imagen.src = lector.result;
+    };
+    lector.readAsDataURL(archivo);
+  });
 }
 
 async function cargarTrabajadores() {
@@ -93,8 +150,8 @@ function llenarSelect(trabajadores) {
   elementos.selectTrabajador.disabled = false;
 
   // Si este telefono ya se uso antes para registrar a alguien, se deja su
-  // nombre preseleccionado (nunca el PIN, eso no se guarda) para que no
-  // tenga que buscarse en la lista cada vez que escanea el QR.
+  // nombre preseleccionado para que no tenga que buscarse en la lista
+  // cada vez que escanea el QR.
   const idRecordado = leerUltimoTrabajador();
   if (idRecordado && trabajadores.some(function (t) { return t.id === idRecordado; })) {
     elementos.selectTrabajador.value = idRecordado;
@@ -105,9 +162,9 @@ function llenarSelect(trabajadores) {
 }
 
 /**
- * Consulta (sin PIN) si el siguiente registro de este trabajador seria
- * una entrada o una salida, y actualiza el texto del boton para que el
- * trabajador sepa que va a pasar antes de confirmar.
+ * Consulta si el siguiente registro de este trabajador seria una entrada
+ * o una salida, y actualiza el texto del boton para que sepa que va a
+ * pasar antes de confirmar.
  */
 async function actualizarBotonSegunTrabajador(idTrabajador) {
   if (!idTrabajador) {
@@ -133,10 +190,9 @@ async function registrarAsistencia() {
   ocultarError();
 
   const idTrabajador = elementos.selectTrabajador.value;
-  const pin = elementos.inputPin.value;
 
-  if (!idTrabajador || pin.length !== 4) {
-    mostrarError('Selecciona tu nombre e ingresa tu PIN de 4 digitos.');
+  if (!idTrabajador || !state.fotoBase64) {
+    mostrarError('Selecciona tu nombre y tomate una foto.');
     return;
   }
 
@@ -152,7 +208,7 @@ async function registrarAsistencia() {
       body: JSON.stringify({
         action: 'registrarAsistencia',
         idTrabajador: idTrabajador,
-        pin: pin
+        foto: state.fotoBase64
       })
     });
 
@@ -160,14 +216,12 @@ async function registrarAsistencia() {
 
     if (!json.success) {
       mostrarError(obtenerMensajeError(json, 'No se pudo registrar la asistencia.'));
-      elementos.inputPin.value = '';
-      validarFormulario();
       return;
     }
 
     guardarUltimoTrabajador(idTrabajador);
     mostrarResultado(json.data);
-    elementos.inputPin.value = '';
+    reiniciarFoto();
   } catch (err) {
     mostrarError('No se pudo conectar con el servidor. Intenta de nuevo.');
   } finally {
@@ -205,10 +259,19 @@ function mostrarResultado(data) {
 function mostrarFormulario() {
   elementos.tarjetaResultado.hidden = true;
   elementos.tarjetaFormulario.hidden = false;
-  elementos.inputPin.value = '';
   ocultarError();
   validarFormulario();
   actualizarBotonSegunTrabajador(elementos.selectTrabajador.value);
+}
+
+function reiniciarFoto() {
+  state.fotoBase64 = null;
+  elementos.inputFoto.value = '';
+  elementos.previewFoto.hidden = true;
+  elementos.previewFoto.src = '';
+  elementos.iconoFoto.textContent = '📷';
+  elementos.textoFoto.textContent = 'Tomar foto';
+  elementos.btnTomarFoto.classList.remove('foto-lista');
 }
 
 function guardarUltimoTrabajador(idTrabajador) {

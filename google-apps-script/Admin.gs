@@ -59,8 +59,8 @@ function adminAgregarPersonal(password, datos) {
   if (!validarAdminPassword(password)) {
     return buildError('NO_AUTORIZADO', 'Contrasena de administrador incorrecta.');
   }
-  if (!datos || !datos.nombre || !datos.pin || !datos.turno) {
-    return buildError('DATOS_INCOMPLETOS', 'Nombre, PIN y turno son obligatorios.');
+  if (!datos || !datos.nombre || !datos.turno) {
+    return buildError('DATOS_INCOMPLETOS', 'Nombre y turno son obligatorios.');
   }
 
   const nombre = String(datos.nombre).trim();
@@ -68,9 +68,14 @@ function adminAgregarPersonal(password, datos) {
     return buildError('DATOS_INCOMPLETOS', 'El nombre no puede estar vacio.');
   }
 
-  const pin = String(datos.pin).trim();
-  if (!/^[0-9]{4}$/.test(pin)) {
-    return buildError('PIN_INVALIDO', 'El PIN debe tener exactamente 4 digitos.');
+  // El PIN ya no se usa para registrar asistencia (se reemplazo por foto),
+  // pero se deja como campo opcional por si se quiere llevar como referencia.
+  let pin = '';
+  if (datos.pin !== undefined && datos.pin !== null && String(datos.pin).trim() !== '') {
+    pin = String(datos.pin).trim();
+    if (!/^[0-9]{4}$/.test(pin)) {
+      return buildError('PIN_INVALIDO', 'Si indicas un PIN, debe tener exactamente 4 digitos.');
+    }
   }
 
   const turno = buscarTurnoPorId(datos.turno);
